@@ -30,9 +30,9 @@
             height: auto;
         }
         #message {
-    position: absolute;  /* Remove o elemento do fluxo da página */
-    left: -9999px;       /* Move o elemento para fora da tela */
-}
+            position: absolute;  /* Remove o elemento do fluxo da página */
+            left: -9999px;       /* Move o elemento para fora da tela */
+        }
 
     </style>
 </head>
@@ -48,20 +48,16 @@
             'https://araujoeduarda.github.io/meu-qr-texto/versiculo1.json',
             'https://araujoeduarda.github.io/meu-qr-texto/versiculo2.json',
             'https://araujoeduarda.github.io/meu-qr-texto/versiculo3.json',
-            'https://araujoeduarda.github.io/meu-qr-texto/versiculo4.json',
-            'https://araujoeduarda.github.io/meu-qr-texto/versiculo5.json',
-            'https://araujoeduarda.github.io/meu-qr-texto/versiculo6.json',
-            'https://araujoeduarda.github.io/meu-qr-texto/versiculo7.json',
-            'https://araujoeduarda.github.io/meu-qr-texto/versiculo8.json',
-            'https://araujoeduarda.github.io/meu-qr-texto/versiculo9.json',
-            'https://araujoeduarda.github.io/meu-qr-texto/versiculo10.json',
-            'https://araujoeduarda.github.io/meu-qr-texto/versiculo11.json',
-            'https://araujoeduarda.github.io/meu-qr-texto/versiculo12.json',
-            'https://araujoeduarda.github.io/meu-qr-texto/versiculo13.json',
+            // Adicione mais URLs conforme necessário
         ];
 
         let indices = jsonUrls.map((_, index) => index);
         let lastIndex = -1;
+        let synth = window.speechSynthesis;
+        let utterance = null;
+        let isPaused = false;
+        let currentText = '';
+        let currentIndex = 0;
 
         function shuffleArray(array) {
             for (let i = array.length - 1; i > 0; i--) {
@@ -76,7 +72,6 @@
                 shuffleArray(indices);
             }
 
-            let currentIndex;
             do {
                 currentIndex = indices[Math.floor(Math.random() * indices.length)];
             } while (currentIndex === lastIndex);
@@ -97,35 +92,55 @@
                 const data = await response.json();
                 console.log('Texto carregado:', data.text);
                 document.getElementById('message').innerText = data.text;
-                setTimeout(() => speakText(data.text), 500);
+                currentText = data.text;
             } catch (error) {
                 document.getElementById('message').innerText = 'Erro ao carregar o texto.';
                 console.error('Erro ao carregar o texto:', error);
             }
         }
 
-        function speakText(text) {
-            if ('speechSynthesis' in window) {
-                const synth = window.speechSynthesis;
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'pt-BR';
-                utterance.onend = () => console.log('Leitura concluída');
-                utterance.onerror = (event) => console.error('Erro na síntese de voz:', event);
-                console.log('Iniciando síntese de voz com o texto:', text);
-                synth.speak(utterance);
+        function playText() {
+            if (utterance && isPaused) {
+                synth.resume();
+                isPaused = false;
+                document.querySelector('#speakButton img').src = 'img/imgpause.png';
             } else {
-                console.error('API de síntese de voz não suportada neste navegador.');
+                utterance = new SpeechSynthesisUtterance(currentText);
+                utterance.lang = 'pt-BR';
+                utterance.onend = () => {
+                    console.log('Leitura concluída');
+                    document.querySelector('#speakButton img').src = 'img/imgplay.png';
+                };
+                utterance.onerror = (event) => console.error('Erro na síntese de voz:', event);
+                console.log('Iniciando síntese de voz com o texto:', currentText);
+                synth.speak(utterance);
+                document.querySelector('#speakButton img').src = 'img/imgpause.png';
             }
         }
 
-        fetchText();
+        function pauseText() {
+            if (synth.speaking && !synth.paused) {
+                synth.pause();
+                isPaused = true;
+                document.querySelector('#speakButton img').src = 'img/imgplay.png';
+            }
+        }
 
         document.getElementById('speakButton').addEventListener('click', () => {
-            const text = document.getElementById('message').innerText;
-            if (text && text !== 'Carregando texto...') {
-                speakText(text);
+            if (synth.speaking) {
+                if (isPaused) {
+                    playText();
+                } else {
+                    pauseText();
+                }
+            } else {
+                if (currentText && currentText !== 'Carregando texto...') {
+                    playText();
+                }
             }
         });
+
+        fetchText();
     </script>
 </body>
 </html>
