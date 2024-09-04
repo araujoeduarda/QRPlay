@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="img/imgplay.png" type="image/x-icon">
+    <title>Texto em Voz Alta</title>
+    <style>
+        /* Estilo para ocupar a altura total da página */
+        html, body {
+            height: 100%;
+            margin: 0;
+            display: grid;
+            place-items: center; /* Centraliza o conteúdo no meio da tela */
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+        }
+
+        /* Estilo do botão */
+        button {
+            padding: 0;
+            border: none;
+            background: none;
+            cursor: pointer;
+        }
+
+        /* Estilo da imagem do botão */
+        button img {
+            width: 80px; /* Ajuste o tamanho da imagem */
+            height: auto;
+        }
+        #message {
+    position: absolute;  /* Remove o elemento do fluxo da página */
+    left: -9999px;       /* Move o elemento para fora da tela */
+}
+
+    </style>
+</head>
+<body>
+    <button id="speakButton">
+        <img src="img/imgplay.png" alt="Falar Texto"> <!-- Imagem no botão -->
+    </button>
+
+    <p id="message">Carregando texto...</p> <!-- Texto invisível -->
+
+    <script>
+        const jsonUrls = [
+            'https://araujoeduarda.github.io/meu-qr-texto/versiculo1.json',
+            'https://araujoeduarda.github.io/meu-qr-texto/versiculo2.json',
+            'https://araujoeduarda.github.io/meu-qr-texto/versiculo3.json',
+            'https://araujoeduarda.github.io/meu-qr-texto/versiculo4.json',
+            'https://araujoeduarda.github.io/meu-qr-texto/versiculo5.json',
+            'https://araujoeduarda.github.io/meu-qr-texto/versiculo6.json',
+            'https://araujoeduarda.github.io/meu-qr-texto/versiculo7.json',
+            'https://araujoeduarda.github.io/meu-qr-texto/versiculo8.json',
+            'https://araujoeduarda.github.io/meu-qr-texto/versiculo9.json',
+            'https://araujoeduarda.github.io/meu-qr-texto/versiculo10.json',
+            'https://araujoeduarda.github.io/meu-qr-texto/versiculo11.json',
+            'https://araujoeduarda.github.io/meu-qr-texto/versiculo12.json',
+            'https://araujoeduarda.github.io/meu-qr-texto/versiculo13.json',
+        ];
+
+        let indices = jsonUrls.map((_, index) => index);
+        let lastIndex = -1;
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function getNextJsonUrl() {
+            if (indices.length === 0) {
+                indices = jsonUrls.map((_, index) => index);
+                shuffleArray(indices);
+            }
+
+            let currentIndex;
+            do {
+                currentIndex = indices[Math.floor(Math.random() * indices.length)];
+            } while (currentIndex === lastIndex);
+
+            indices = indices.filter(index => index !== currentIndex);
+            lastIndex = currentIndex;
+            return jsonUrls[currentIndex];
+        }
+
+        async function fetchText() {
+            const jsonUrl = getNextJsonUrl();
+            try {
+                console.log('Buscando texto de:', jsonUrl);
+                const response = await fetch(jsonUrl);
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                const data = await response.json();
+                console.log('Texto carregado:', data.text);
+                document.getElementById('message').innerText = data.text;
+                setTimeout(() => speakText(data.text), 500);
+            } catch (error) {
+                document.getElementById('message').innerText = 'Erro ao carregar o texto.';
+                console.error('Erro ao carregar o texto:', error);
+            }
+        }
+
+        function speakText(text) {
+            if ('speechSynthesis' in window) {
+                const synth = window.speechSynthesis;
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'pt-BR';
+                utterance.onend = () => console.log('Leitura concluída');
+                utterance.onerror = (event) => console.error('Erro na síntese de voz:', event);
+                console.log('Iniciando síntese de voz com o texto:', text);
+                synth.speak(utterance);
+            } else {
+                console.error('API de síntese de voz não suportada neste navegador.');
+            }
+        }
+
+        fetchText();
+
+        document.getElementById('speakButton').addEventListener('click', () => {
+            const text = document.getElementById('message').innerText;
+            if (text && text !== 'Carregando texto...') {
+                speakText(text);
+            }
+        });
+    </script>
+</body>
+</html>
